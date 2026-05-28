@@ -1,178 +1,127 @@
-import os
 import pandas as pd
+import os
+import glob
+import ta
 
-results = []
+# ===== 股票名稱對照 =====
 
-folder = "stock_data"
+stock_info = pd.read_csv(
+    "stock_list.csv"
+)
 
-for file in os.listdir(folder):
+name_map = {}
 
-    if not file.endswith(".csv"):
-
-        continue
+for _, row in stock_info.iterrows():
 
     try:
 
-        stock_id = file.replace(".csv", "")
-
-        df = pd.read_csv(
-
-            f"{folder}/{file}"
-
+        stock_id = str(
+            int(row["股票代號"])
         )
 
-        if len(df) < 60:
-
-            continue
-
-
-        # ===== 數值 =====
-
-        close = pd.to_numeric(
-
-            df["Close"],
-
-            errors="coerce"
-
+        stock_name = str(
+            row["股票名稱"]
         )
 
-        volume = pd.to_numeric(
-
-            df["Volume"],
-
-            errors="coerce"
-
-        )
-
-
-        # ===== 最新資料 =====
-
-        latest_close = close.iloc[-1]
-
-        latest_volume = volume.iloc[-1]
-
-
-        # ===== 成交值 =====
-
-        latest_amount = (
-
-            latest_close *
-
-            latest_volume
-
-        )
-
-
-        # ===== 均線 =====
-
-        ma5 = close.rolling(5).mean()
-
-        ma20 = close.rolling(20).mean()
-
-        ma60 = close.rolling(60).mean()
-
-        volume_ma5 = volume.rolling(5).mean()
-
-
-        # ===== RSI =====
-
-        delta = close.diff()
-
-        gain = delta.clip(lower=0)
-
-        loss = -delta.clip(upper=0)
-
-        avg_gain = gain.rolling(14).mean()
-
-        avg_loss = loss.rolling(14).mean()
-
-        rs = avg_gain / avg_loss
-
-        rsi = 100 - (
-
-            100 / (1 + rs)
-
-        )
-
-        latest_rsi = rsi.iloc[-1]
-
-
-        # ===== 5日漲幅 =====
-
-        change_percent = (
-
-            (latest_close - close.iloc[-6])
-
-            / close.iloc[-6]
-
-        ) * 100
-
-
-        # ===== 加入結果 =====
-
-        results.append([
-
-            stock_id,
-
-            latest_close,
-
-            ma5.iloc[-1],
-
-            ma20.iloc[-1],
-
-            ma60.iloc[-1],
-
-            latest_volume,
-
-            latest_amount,
-
-            volume_ma5.iloc[-1],
-
-            latest_rsi,
-
-            change_percent
-
-        ])
+        name_map[stock_id] = stock_name
 
     except:
+        continue
+
+
+all_data = []
+
+# ===== 讀取所有股票資料 =====
+
+files = glob.glob("stock_data/*.csv")
+
+for file in files:
+
+    try:
+
+        df = pd.read_csv(file)
+
+        if len(df) < 60:
+            continue
+
+        stock_id = os.path.basename(file).replace(".csv", "")
+
+        stock_id = stock_id.split(".")[0]
+
+        stock_name = name_map.get(
+            stock_id,
+            ""
+        )
+
+        print(f"處理中: {stock_id}")
+
+        # ===== Yahoo欄位 =====
+
+        close = df["Close"]
+
+        volume = df["Volume"]
+
+        # ===== 成交值估算 =====
+
+        amount = close * volume
+
+        # ===== 技術指標 =====
+
+        ma5 = close.rolling(5).mean().iloc[-1]
+
+        ma20 = close.rolling(20).mean().iloc[-1]
+
+        ma60 = close.rolling(60).mean().iloc[-1]
+
+        volume_ma5 = volume.rolling(5).mean().iloc[-1]
+
+        rsi = ta.momentum.RSIIndicator(
+            close,
+            window=14
+        ).rsi().iloc[-1]
+
+        change = (
+            (
+                close.iloc[-1]
+                -
+                close.iloc[-6]
+            )
+            /
+            close.iloc[-6]
+        ) * 100
+
+        all_data.append({
+
+            "股票代號": stock_id,
+            "股票名稱": stock_name,
+            "收盤價": round(close.iloc[-1], 2),
+            "MA5": round(ma5, 2),
+            "MA20": round(ma20, 2),
+            "MA60": round(ma60, 2),
+            "成交量": int(volume.iloc[-1]),
+            "成交值": int(amount.iloc[-1]),
+            "量MA5": int(volume_ma5),
+            "RSI": round(rsi, 2),
+            "5日漲幅": round(change, 2)
+
+        })
+
+    except Exception as e:
+
+        print(f"\n錯誤檔案: {file}")
+
+        print(e)
 
         continue
 
 
 # ===== DataFrame =====
 
-result_df = pd.DataFrame(
+result_df = pd.DataFrame(all_data)
 
-    results,
+print(f"\n成功股票數量: {len(result_df)}")
 
-    columns=[
-
-        "股票代號",
-
-        "收盤價",
-
-        "MA5",
-
-        "MA20",
-
-        "MA60",
-
-        "成交量",
-
-        "成交值",
-
-        "量MA5",
-
-        "RSI",
-
-        "5日漲幅"
-
-    ]
-
-)
-
-
-# ===== 輸出 =====
+# ===== 儲存 =====
 
 result_df.to_csv(
 
@@ -184,4 +133,4 @@ result_df.to_csv(
 
 )
 
-print("\nall_stocks.csv 建立完成")
+print("\nall_stocks.csv 已更新")

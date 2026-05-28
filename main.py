@@ -7,6 +7,7 @@ print("讀取 industry_master.csv")
 
 sector_map = {}
 industry_map = {}
+name_map = {}
 
 # ===== 讀取乾淨版族群資料庫 =====
 
@@ -58,6 +59,26 @@ df = pd.read_csv(
     "all_stocks.csv"
 )
 
+# ===== 股票名稱 =====
+
+for _, row in df.iterrows():
+
+    try:
+
+        stock_id = str(
+            int(row["股票代號"])
+        )
+
+        stock_name = str(
+            row["股票名稱"]
+        )
+
+        name_map[stock_id] = stock_name
+
+    except:
+        continue
+
+
 results = []
 
 # ===== 選股 =====
@@ -68,6 +89,11 @@ for _, row in df.iterrows():
 
         stock_id = str(
             int(row["股票代號"])
+        )
+
+        stock_name = name_map.get(
+            stock_id,
+            ""
         )
 
         close = float(row["收盤價"])
@@ -199,6 +225,7 @@ for _, row in df.iterrows():
             results.append([
 
                 stock_id,
+                stock_name,
                 industry,
                 sector,
                 score,
@@ -223,6 +250,7 @@ result_df = pd.DataFrame(
     columns=[
 
         "代號",
+        "名稱",
         "產業",
         "族群",
         "分數",

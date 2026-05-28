@@ -412,7 +412,59 @@ sector_table = tabulate(
 )
 
 print(sector_table)
+# ===== 主流歷史紀錄 =====
 
+from datetime import datetime
+
+today = datetime.now().strftime("%Y-%m-%d")
+
+history_rows = []
+
+for _, row in sector_df.iterrows():
+
+    history_rows.append([
+
+        today,
+        row["族群"],
+        row["熱度"],
+        row["檔數"],
+        row["平均分數"]
+
+    ])
+
+history_df = pd.DataFrame(
+
+    history_rows,
+
+    columns=[
+
+        "日期",
+        "族群",
+        "熱度",
+        "檔數",
+        "平均分數"
+
+    ]
+
+)
+
+# ===== 寫入歷史 =====
+
+history_df.to_csv(
+
+    "sector_history.csv",
+
+    mode="a",
+
+    header=False,
+
+    index=False,
+
+    encoding="utf-8-sig"
+
+)
+
+print("\n主流歷史已更新")
 # ===== TOP30 =====
 
 print("\n===== TOP30主流集中度 =====\n")

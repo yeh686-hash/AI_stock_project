@@ -1,47 +1,109 @@
+import requests
 import pandas as pd
-import twstock
+import urllib3
 
-# ===== 股票資料 =====
+# ===== 關閉 SSL 警告 =====
 
-stocks = twstock.codes
+urllib3.disable_warnings()
 
-# ===== 建立清單 =====
+stock_list = []
 
-data = []
+# ===== 上市股票 =====
 
-for stock_id in stocks:
+url_twse = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
 
-    try:
+try:
 
-        stock = stocks[stock_id]
+    data = requests.get(
+        url_twse,
+        timeout=30
+    ).json()
 
-        # ===== 過濾股票 =====
+    for row in data:
 
-        if stock.market not in [
+        try:
 
-            "上市",
-            "上櫃"
+            stock_id = str(
+                row["Code"]
+            )
 
-        ]:
+            stock_name = str(
+                row["Name"]
+            )
 
+            # ===== 只保留4碼股票 =====
+
+            if len(stock_id) != 4:
+                continue
+
+            if not stock_id.isdigit():
+                continue
+
+            stock_list.append([
+
+                stock_id,
+                stock_name
+
+            ])
+
+        except:
             continue
 
-        data.append([
+except Exception as e:
 
-            stock.code,
-            stock.name
+    print("上市股票錯誤:", e)
 
-        ])
+# ===== 上櫃股票 =====
 
-    except:
+url_tpex = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
 
-        continue
+try:
+
+    data = requests.get(
+        url_tpex,
+        timeout=30,
+        verify=False
+    ).json()
+
+    for row in data:
+
+        try:
+
+            stock_id = str(
+                row["SecuritiesCompanyCode"]
+            )
+
+            stock_name = str(
+                row["CompanyName"]
+            )
+
+            # ===== 只保留4碼股票 =====
+
+            if len(stock_id) != 4:
+                continue
+
+            if not stock_id.isdigit():
+                continue
+
+            stock_list.append([
+
+                stock_id,
+                stock_name
+
+            ])
+
+        except:
+            continue
+
+except Exception as e:
+
+    print("上櫃股票錯誤:", e)
 
 # ===== DataFrame =====
 
-df = pd.DataFrame(
+result_df = pd.DataFrame(
 
-    data,
+    stock_list,
 
     columns=[
 
@@ -52,9 +114,19 @@ df = pd.DataFrame(
 
 )
 
-# ===== 存檔 =====
+# ===== 去重複 =====
 
-df.to_csv(
+result_df = result_df.drop_duplicates()
+
+# ===== 排序 =====
+
+result_df = result_df.sort_values(
+    by="股票代號"
+)
+
+# ===== 儲存 =====
+
+result_df.to_csv(
 
     "stock_list.csv",
 
@@ -64,8 +136,8 @@ df.to_csv(
 
 )
 
-print("\n股票清單建立完成")
+# ===== 顯示 =====
 
-print(
-    f"股票數量: {len(df)}"
-)
+print("\nstock_list.csv 已更新")
+
+print(f"股票數量: {len(result_df)}")

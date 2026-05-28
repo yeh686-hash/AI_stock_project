@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from tabulate import tabulate
+from datetime import datetime
 
 print("讀取 sector_master.csv")
 print("讀取 industry_master.csv")
@@ -56,7 +57,8 @@ if os.path.exists("industry_master.csv"):
 # ===== 讀取技術資料 =====
 
 df = pd.read_csv(
-    "all_stocks.csv"
+    "all_stocks.csv",
+    encoding="utf-8-sig"
 )
 
 # ===== 股票名稱 =====
@@ -233,6 +235,7 @@ for _, row in df.iterrows():
                 round(rsi, 2),
                 int(volume),
                 int(amount),
+                round(close, 2),
                 risk
 
             ])
@@ -258,6 +261,7 @@ result_df = pd.DataFrame(
         "RSI",
         "成交量",
         "成交值",
+        "收盤價",
         "風險"
 
     ]
@@ -412,9 +416,8 @@ sector_table = tabulate(
 )
 
 print(sector_table)
-# ===== 主流歷史紀錄 =====
 
-from datetime import datetime
+# ===== 主流歷史紀錄 =====
 
 today = datetime.now().strftime("%Y-%m-%d")
 
@@ -448,8 +451,6 @@ history_df = pd.DataFrame(
 
 )
 
-# ===== 寫入歷史 =====
-
 history_df.to_csv(
 
     "sector_history.csv",
@@ -465,6 +466,7 @@ history_df.to_csv(
 )
 
 print("\n主流歷史已更新")
+
 # ===== TOP30 =====
 
 print("\n===== TOP30主流集中度 =====\n")
@@ -555,6 +557,56 @@ result_df.to_csv(
     encoding="utf-8-sig"
 
 )
+
+# ===== 每日選股紀錄 =====
+
+pick_rows = []
+
+for _, row in result_df.iterrows():
+
+    pick_rows.append([
+
+        today,
+        row["代號"],
+        row["名稱"],
+        row["族群"],
+        row["分數"],
+        row["收盤價"]
+
+    ])
+
+pick_df = pd.DataFrame(
+
+    pick_rows,
+
+    columns=[
+
+        "日期",
+        "代號",
+        "名稱",
+        "族群",
+        "分數",
+        "收盤價"
+
+    ]
+
+)
+
+pick_df.to_csv(
+
+    "daily_picks.csv",
+
+    mode="a",
+
+    header=False,
+
+    index=False,
+
+    encoding="utf-8-sig"
+
+)
+
+print("\n每日選股已更新")
 
 # ===== 輸出TXT =====
 

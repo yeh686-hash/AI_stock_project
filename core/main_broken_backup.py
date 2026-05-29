@@ -7,7 +7,17 @@ from tabulate import tabulate
 # =====================
 
 DATA_PATH = "stock_data"
+print("讀取 stock_list.csv")
+stock_df = pd.read_csv(
+    "stock_list.csv",
+    encoding="utf-8-sig"
+)
 
+print("讀取 theme_score.csv")
+theme_df = pd.read_csv(
+    "config/theme_score.csv",
+    encoding="utf-8-sig"
+)
 print("讀取 industry_master.csv")
 industry_df = pd.read_csv(
     "industry_master.csv",
@@ -20,16 +30,27 @@ sector_df = pd.read_csv(
     encoding="utf-8-sig"
 )
 
-# 股票名稱對照
+# 股票名稱
 
+stock_df["股票代號"] = (
+    stock_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
+
+industry_df["股票代號"] = (
+    industry_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
 name_map = dict(
     zip(
-        industry_df["股票代號"].astype(str).str.zfill(4),
-        industry_df["股票名稱"]
+        stock_df["股票代號"].astype(str).str.zfill(4),
+        stock_df["股票名稱"]
     )
 )
 
-# 產業對照
+# 產業
 
 industry_map = dict(
     zip(
@@ -38,7 +59,13 @@ industry_map = dict(
     )
 )
 
-# 多族群對照
+# 族群
+
+sector_df["股票代號"] = (
+    sector_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
 
 sector_map = (
     sector_df
@@ -46,7 +73,21 @@ sector_map = (
     .apply(lambda x: "|".join(sorted(set(x))))
     .to_dict()
 )
+# 題材分數表
 
+theme_score_map = dict(
+    zip(
+        theme_df["題材"],
+        theme_df["分數"]
+    )
+)
+
+theme_category_map = dict(
+    zip(
+        theme_df["題材"],
+        theme_df["分類"]
+    )
+)
 result_list = []
 
 # =====================
@@ -177,7 +218,43 @@ for file in files:
 
         if change_5d > 3:
             score += 5
+# =====================
+# 題材加分 V3
+# =====================
 
+sector = sector_map.get(
+    stock_id,
+    "其他"
+)
+
+theme_categories_used = set()
+
+if sector != "其他":
+
+    for theme in sector.split("|"):
+
+        theme = theme.strip()
+
+        if theme not in theme_score_map:
+            continue
+
+        category = theme_category_map.get(
+            theme,
+            "其他"
+        )
+
+        # 同分類只加一次分
+
+        if category in theme_categories_used:
+            continue
+
+        score += int(
+            theme_score_map[theme]
+        )
+
+        theme_categories_used.add(
+            category
+        )
         # =====================
         # 風險
         # =====================
@@ -337,6 +414,32 @@ with open(
             showindex=False
         )
     )
+# =====================
+# 未分類排行榜
+# =====================
+
+unclassified_df = result_df[
+    (result_df["產業"] == "其他")
+    |
+    (result_df["族群"] == "其他")
+]
+
+unclassified_df = unclassified_df.sort_values(
+    by="成交值",
+    ascending=False
+)
+
+unclassified_df.head(100).to_csv(
+
+    "reports/unclassified.csv",
+
+    index=False,
+
+    encoding="utf-8-sig"
+
+)
+
+print("未分類排行榜已輸出")
 
 print("\n每日選股已更新")
 print("選股結果已輸出")

@@ -27,6 +27,17 @@ sector_df = pd.read_csv(
 
 # 股票名稱
 
+stock_df["股票代號"] = (
+    stock_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
+
+industry_df["股票代號"] = (
+    industry_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
 name_map = dict(
     zip(
         stock_df["股票代號"].astype(str).str.zfill(4),
@@ -45,13 +56,18 @@ industry_map = dict(
 
 # 族群
 
+sector_df["股票代號"] = (
+    sector_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
+
 sector_map = (
     sector_df
     .groupby("股票代號")["族群"]
     .apply(lambda x: "|".join(sorted(set(x))))
     .to_dict()
 )
-
 result_list = []
 
 # =====================

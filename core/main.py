@@ -8,6 +8,12 @@ from tabulate import tabulate
 
 DATA_PATH = "stock_data"
 
+print("讀取 stock_list.csv")
+stock_df = pd.read_csv(
+    "stock_list.csv",
+    encoding="utf-8-sig"
+)
+
 print("讀取 industry_master.csv")
 industry_df = pd.read_csv(
     "industry_master.csv",
@@ -24,8 +30,8 @@ sector_df = pd.read_csv(
 
 name_map = dict(
     zip(
-        industry_df["股票代號"].astype(str).str.zfill(4),
-        industry_df["股票名稱"]
+        stock_df["股票代號"].astype(str).str.zfill(4),
+        stock_df["股票名稱"]
     )
 )
 
@@ -39,6 +45,12 @@ industry_map = dict(
 )
 
 # 多族群對照
+
+sector_df["股票代號"] = (
+    sector_df["股票代號"]
+    .astype(str)
+    .str.zfill(4)
+)
 
 sector_map = (
     sector_df
@@ -337,6 +349,29 @@ with open(
             showindex=False
         )
     )
+
+# =====================
+# 未分類排行榜
+# =====================
+
+unclassified_df = result_df[
+    (result_df["產業"] == "其他")
+    |
+    (result_df["族群"] == "其他")
+]
+
+unclassified_df = unclassified_df.sort_values(
+    by="成交值",
+    ascending=False
+)
+
+unclassified_df.head(100).to_csv(
+    "reports/unclassified.csv",
+    index=False,
+    encoding="utf-8-sig"
+)
+
+print("未分類排行榜已輸出")
 
 print("\n每日選股已更新")
 print("選股結果已輸出")

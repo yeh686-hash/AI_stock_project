@@ -25,7 +25,25 @@ sector_df = pd.read_csv(
     "sector_master.csv",
     encoding="utf-8-sig"
 )
+print("讀取 theme_score.csv")
+theme_df = pd.read_csv(
+    "config/theme_score.csv",
+    encoding="utf-8-sig"
+)
 
+theme_score_map = dict(
+    zip(
+        theme_df["題材"],
+        theme_df["分數"]
+    )
+)
+
+theme_category_map = dict(
+    zip(
+        theme_df["題材"],
+        theme_df["分類"]
+    )
+)
 # 股票名稱對照
 
 name_map = dict(
@@ -220,6 +238,36 @@ for file in files:
             stock_id,
             "其他"
         )
+        # =====================
+        # 題材加分 V3
+        # =====================
+
+        theme_categories_used = set()
+
+        if sector != "其他":
+
+            for theme in sector.split("|"):
+
+                theme = theme.strip()
+
+                if theme not in theme_score_map:
+                    continue
+
+                category = theme_category_map.get(
+                    theme,
+                    "其他"
+                )
+
+                if category in theme_categories_used:
+                    continue
+
+                score += int(
+                    theme_score_map[theme]
+                )
+
+                theme_categories_used.add(
+                    category
+                )
 
         result_list.append({
 
